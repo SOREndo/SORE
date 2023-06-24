@@ -96,9 +96,9 @@ SORE <- function(formula, W=NULL, xstar=NULL, digit=NULL, RR.GC=F, stdR=F, stdE=
                         control=list(trace=1, maxit=100000))
     }
     
-    return(list(par=fitSORE$par, se=sqrt(diag(solve(fitHess))), objective=fitSORE$obj, convergence=fitSORE$converg, iterations=fitSORE$iterations, evaluations=fitSORE$evaluations))
+    return(list(par=fitSORE$par, se=sqrt(diag(solve(fitHess))), loglik=-fitSORE$obj, convergence=fitSORE$converg, iterations=fitSORE$iterations, evaluations=fitSORE$evaluations))
   }
-  else return(fitSORE) 
+  else {fitSORE$loglik=-fitSORE$obj; return(fitSORE)} 
 
 }
 
@@ -257,13 +257,28 @@ llk.SORE<- function(eps, X, Z, ux, ux4z,  lambda, gamma) {
 data<-read.table(file="example1.dat", header=T)
 
 ## SORE estimation
+## (1) formula=y~x|x below specifies a structural model y=x+Error, 
+##     where x is endogenous and so is specified after the vertical bar "|".
+## (2) the function argument xstar specifies a numeric vector denoting the positions of endogenous regressors that need normal score transformation for GC 
+##            regressor-error dependence structure. In this example, xstar=1 means the first endogenous regressor follows GC
+##            dependence structure. 
+##  (3) stdE=T means the structural error term is standardized by its standard deviation. The two possible values (T and F) of stdE resut in 
+##            reparameterization of the same SORE model, and simply scale  the log-odds-ratio parameter for regressor-error dependence 
+##            differently in relative to the structural error standard deviation.
+##  (4) prof=T means the estimation is done via maximizing the profile likelihood that eliminates the nuisance parameters in baseline functions. 
+##          =F means that estimation is done via maximizing the regular likelihood. 
 results<-SORE(formula=y~x|x, xstar=1, stdE=T, data=data, prof=T)
 
+## Because the estimation routine minimizes the negative likelihood function over unconstrained parameter space, we used the log
+## transformation for the error standard deviation. The step below transform this log error standard deviation back to the original
+## error standard deviation. 
 results$par[3] <- exp(results$par[3])
-results$par
--results$obj
+## The step below prints out the parameter estimate for intercept, coefficient for x, error standard deviation and the log odds ratio parameter \gamma
+results$par  
+## This step prints out the maximized log likelihood for the SORE model
+results$loglik
 
-## JCM estimation
+## JCM estimation as the benchmark analysis
 summary(lm(y~x+xstar, data=data))
 
 
@@ -276,6 +291,16 @@ data<-read.table(file="example2.dat", header=T)
 ## Recommend to have at least 30 unique values remaining after rounding. 
 data$xstar = round(data$xstar,1) 
 
+## (1) data contains three variables: y (the outcome), x (the endogenous regressor) and xstar (the GC copula transformation of x)
+## (2) formula=y~x|xstar below specifies the structural model as y=x+Error, 
+##     where the regressor x is endogenous, and its latent copula data, xstar, is specified after the vertical bar "|".
+##     Including the GC copula (normal score) transformation of an endogenous regressor after the vertical bar "|" permits modeling GC regressor-error dependence
+##     and requires creating this variable and including it in data. 
+##     Alternatively, one can specify the GC regressor-error dependence without creating and including the normal score transformation variable in the data.
+##     See Example 1 above for an example of this alternative way to specify GC regressor-error dependence, which makes use of the "xstar" argument in the SORE() function. 
+##     See Web Appendix Table W3 for more details.
+## (3) tolprof specifies the threshold value used to determine convergence  of nuisance baseline parameters within the profile likelihood algorithm (Step 2.c in Web Appendix A.2). 
+##     Default=1e-8. We find a larger threhold value is often sufficient and results in essentially the same converged value.         
 fitSORE<-SORE(formula=y~x|xstar,  data=data, prof=T, tolprof=1e-3)
 
 fitSORE$par[3] <- exp(fitSORE$par[3])
@@ -284,13 +309,39 @@ fitSORE$par
 ############################# Example 3: Correlated x and w ###############################
 data<-read.table(file="example3.dat", header=T)
 
-## Rounding to reduce the unique values of the endogenous regressors to reduce computational time.
-## no need to round w as W is not modeled
-data$xstar = round(data$xstar,1) 
 
+## (1) formula=y~x+w|x below specifies the structural model as y=x+w+Error,  where the regressor x is endogenous
+## (2) W=~w specifies the exogenous variable w is used to model the endogenous regressor.
+## (3) xstar=1 specifies that the first endogenous regressor and the error term jointly follow a GC dependence. xstar=NULL (default) yields LB regressor-error dependence. 
+## (4) RR.GC=T specifies that the endogenous regressor and the exogenous regressors follows a GC dependence. RR.GC=F yields LB regressor-regressor dependence. 
+fitSORE<-SORE(formula=y~x+w|x, W=~w, xstar=1, RR.GC=T, data=data, prof=T, tolprof=1e-3)
 
-fitSORE<-SORE(formula=y~x+w|xstar, W=~wstar, data=data, prof=T, tolprof=1e-3)
-
+## print out model estimates
 fitSORE$par[4] <- exp(fitSORE$par[4])
 fitSORE$par
+## print out maximized model likelihood
+fitSORE$loglik
+
+############################# Example 4: Binary Endogenous Regressors #####################################
+data<-read.table(file="example4.dat", header=T)
+
+## OLS analysis
+ols<- lm(y~x, data=data); summary(ols)
+
+## SORE estimation
+## To safeguard against the possibility of multiple local maxima in likelihood function and ensure locating the global maximum, a common practice is to run the estimation algorithm
+## from different starting values and compare the maximized likelihood(s) obtained from these starting values. The code below sets starting values of structural model
+## parameters as the OLS estimates and a grid of values for the endogeneity log-OR parameter gamma0
+gamma0<- 10 ## the gamma0 value is the starting value value for the log OR endogeneity parameer gamma and   can be varied in a grid of  values, e.g., from 10 to -10. 
+par0<-c(coef(summary(ols))[,1], log(summary(ols)$sigma), gamma0)
+## (1) formula=y~x|x below specifies the structural model as y=x+Error, 
+##     where the regressor x is endogenous, and  is specified after the vertical bar "|". This specifies an LB regressor-error dependence since xstar=NULL by default
+## (2) parstart=par0 specifies the starting values of estimation algorithm as the par0 vector. The OLS estimate and gamma=0 are set as the default starting values. 
+fitSORE<-SORE(formula=y~x|x, data=data, prof=T, tolprof=1e-3, hess=T, parstart=par0)
+
+## print the parameter estimates for intercept, coefficient for x, error standard deviation and the log odds ratio parameter \gamma
+fitSORE$par[3] <- exp(fitSORE$par[3])
+fitSORE$par
+## Print the likelihood 
+fitSORE$loglik
 
