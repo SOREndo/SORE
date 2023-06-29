@@ -292,7 +292,7 @@ data<-read.table(file="example2.dat", header=T)
 data$xstar = round(data$xstar,1) 
 
 ## (1) data contains three variables: y (the outcome), x (the endogenous regressor) and xstar (the GC copula transformation of x)
-## (2) formula=y~x|xstar below specifies the structural model as y=intercept=a*x+Error, 
+## (2) formula=y~x|xstar below specifies the structural model as y=intercept+a*x+Error, 
 ##     where the regressor x is endogenous, and its latent copula data, xstar, is specified after the vertical bar "|".
 ##     Including the GC copula (normal score) transformation of an endogenous regressor after the vertical bar "|" permits modeling GC regressor-error dependence
 ##     and requires creating this variable and including it in data. 
