@@ -257,7 +257,7 @@ llk.SORE<- function(eps, X, Z, ux, ux4z,  lambda, gamma) {
 data<-read.table(file="example1.dat", header=T)
 
 ## SORE estimation
-## (1) formula=y~x|x below specifies a structural model y=x+Error, 
+## (1) formula=y~x|x below specifies a structural model y=intercept+ a*x+Error, 
 ##     where x is endogenous and so is specified after the vertical bar "|".
 ## (2) the function argument xstar specifies a numeric vector denoting the positions of endogenous regressors that need normal score transformation for GC 
 ##            regressor-error dependence structure. In this example, xstar=1 means the first endogenous regressor follows GC
@@ -292,7 +292,7 @@ data<-read.table(file="example2.dat", header=T)
 data$xstar = round(data$xstar,1) 
 
 ## (1) data contains three variables: y (the outcome), x (the endogenous regressor) and xstar (the GC copula transformation of x)
-## (2) formula=y~x|xstar below specifies the structural model as y=x+Error, 
+## (2) formula=y~x|xstar below specifies the structural model as y=intercept=a*x+Error, 
 ##     where the regressor x is endogenous, and its latent copula data, xstar, is specified after the vertical bar "|".
 ##     Including the GC copula (normal score) transformation of an endogenous regressor after the vertical bar "|" permits modeling GC regressor-error dependence
 ##     and requires creating this variable and including it in data. 
@@ -310,7 +310,7 @@ fitSORE$par
 data<-read.table(file="example3.dat", header=T)
 
 
-## (1) formula=y~x+w|x below specifies the structural model as y=x+w+Error,  where the regressor x is endogenous
+## (1) formula=y~x+w|x below specifies the structural model as y=intercept+a*x+b*w+Error,  where the regressor x is endogenous
 ## (2) W=~w specifies the exogenous variable w is used to model the endogenous regressor.
 ## (3) xstar=1 specifies that the first endogenous regressor and the error term jointly follow a GC dependence. xstar=NULL (default) yields LB regressor-error dependence. 
 ## (4) RR.GC=T specifies that the endogenous regressor and the exogenous regressors follows a GC dependence. RR.GC=F yields LB regressor-regressor dependence. 
@@ -334,7 +334,7 @@ ols<- lm(y~x, data=data); summary(ols)
 ## parameters as the OLS estimates and a grid of values for the endogeneity log-OR parameter gamma0
 gamma0<- 10 ## the gamma0 value is the starting value value for the log OR endogeneity parameer gamma and   can be varied in a grid of  values, e.g., from 10 to -10. 
 par0<-c(coef(summary(ols))[,1], log(summary(ols)$sigma), gamma0)
-## (1) formula=y~x|x below specifies the structural model as y=x+Error, 
+## (1) formula=y~x|x below specifies the structural model as y=intercept+a*x+Error, 
 ##     where the regressor x is endogenous, and  is specified after the vertical bar "|". This specifies an LB regressor-error dependence since xstar=NULL by default
 ## (2) parstart=par0 specifies the starting values of estimation algorithm as the par0 vector. The OLS estimate and gamma=0 are set as the default starting values. 
 fitSORE<-SORE(formula=y~x|x, data=data, prof=T, tolprof=1e-3, hess=T, parstart=par0)
