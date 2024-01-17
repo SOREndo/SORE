@@ -14,7 +14,7 @@ SORE <- function(formula, W=NULL, xstar=NULL, digit=NULL, RR.GC=F, stdR=F, stdE=
   ## stdE: a flag: =T is standardize error term by its SD estimate, =F if not
   ## data: name of data frame containing all data elements
   ## parstart: starting values of parameters. Default to OLS estimates. 
-  ## hess: =T if computing hessian matrix
+  ## hess: =T if computing standard error by inverting hessian matrix
   ## prof: =T if using profile likelihood
   ## trace: the amount of printed information at intermediate iteration steps
   ## tolprof: the threshold value used in the profile likelihood to determine the convergence of  baseline parameters. 
